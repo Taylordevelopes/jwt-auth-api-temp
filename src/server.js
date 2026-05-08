@@ -8,6 +8,15 @@ const bcrypt = require("bcrypt");
 
 const app = express();
 
+function createSlug(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -106,6 +115,192 @@ app.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+app.post("/subscribe", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email is required",
+      });
+    }
+
+    const result = await db.query(
+      `
+        INSERT INTO subscribers (email)
+        VALUES ($1)
+        RETURNING id, email, subscribed_at
+      `,
+      [email],
+    );
+
+    res.status(201).json({
+      message: "Subscribed successfully",
+      subscriber: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Subscribe error:", error);
+
+    if (error.code === "23505") {
+      return res.status(400).json({
+        error: "Email already subscribed",
+      });
+    }
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+app.post("/post-blog", async (req, res) => {
+  try {
+    const { blogger_id, body, published, title } = req.body;
+
+    if (!blogger_id || !body || !title) {
+      return res.status(400).json({
+        error: "Email is required",
+      });
+    }
+
+    const result = await db.query(
+      `
+        INSERT INTO subscribers (email)
+        VALUES ($1)
+        RETURNING id, email, subscribed_at
+      `,
+      [email],
+    );
+
+    res.status(201).json({
+      message: "Subscribed successfully",
+      subscriber: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Subscribe error:", error);
+
+    if (error.code === "23505") {
+      return res.status(400).json({
+        error: "Email already subscribed",
+      });
+    }
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+app.post("/products", async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      image_url,
+      site_url,
+      download_url,
+      featured = false,
+    } = req.body;
+
+    if (!title || !description || !image_url) {
+      return res.status(400).json({
+        error: "title, description, and image_url are required",
+      });
+    }
+
+    const slug = createSlug(title);
+
+    const result = await db.query(
+      `
+        INSERT INTO products (
+          title,
+          slug,
+          description,
+          image_url,
+          site_url,
+          download_url,
+          featured
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `,
+      [title, slug, description, image_url, site_url, download_url, featured],
+    );
+
+    res.status(201).json({
+      message: "Product created successfully",
+      product: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Create product error:", error);
+
+    if (error.code === "23505") {
+      return res.status(400).json({
+        error: "A product with this slug already exists",
+      });
+    }
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+function createSlug(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+app.post("/post-blog", async (req, res) => {
+  try {
+    const { blogger_id, title, body, published = false } = req.body;
+
+    if (!blogger_id || !title || !body) {
+      return res.status(400).json({
+        error: "blogger_id, title, and body are required",
+      });
+    }
+
+    const slug = createSlug(title);
+
+    const result = await db.query(
+      `
+        INSERT INTO blogs (blogger_id, title, slug, body, published)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, blogger_id, title, slug, body, published, created_at, updated_at
+      `,
+      [blogger_id, title, slug, body, published],
+    );
+
+    res.status(201).json({
+      message: "Blog created successfully",
+      blog: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Post blog error:", error);
+
+    if (error.code === "23505") {
+      return res.status(400).json({
+        error: "A blog with this slug/title already exists",
+      });
+    }
+
+    if (error.code === "23503") {
+      return res.status(400).json({
+        error: "Invalid blogger_id. User does not exist.",
+      });
+    }
 
     res.status(500).json({
       error: "Something went wrong",
