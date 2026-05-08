@@ -160,44 +160,6 @@ app.post("/subscribe", async (req, res) => {
   }
 });
 
-app.post("/post-blog", async (req, res) => {
-  try {
-    const { blogger_id, body, published, title } = req.body;
-
-    if (!blogger_id || !body || !title) {
-      return res.status(400).json({
-        error: "Email is required",
-      });
-    }
-
-    const result = await db.query(
-      `
-        INSERT INTO subscribers (email)
-        VALUES ($1)
-        RETURNING id, email, subscribed_at
-      `,
-      [email],
-    );
-
-    res.status(201).json({
-      message: "Subscribed successfully",
-      subscriber: result.rows[0],
-    });
-  } catch (error) {
-    console.error("Subscribe error:", error);
-
-    if (error.code === "23505") {
-      return res.status(400).json({
-        error: "Email already subscribed",
-      });
-    }
-
-    res.status(500).json({
-      error: "Something went wrong",
-    });
-  }
-});
-
 app.post("/products", async (req, res) => {
   try {
     const {
@@ -252,15 +214,6 @@ app.post("/products", async (req, res) => {
     });
   }
 });
-
-function createSlug(title) {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
 
 app.post("/post-blog", async (req, res) => {
   try {
