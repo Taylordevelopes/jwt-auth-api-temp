@@ -6,3 +6,5 @@ function createSlug(title) {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 }
+
+module.exports = createSlug;
