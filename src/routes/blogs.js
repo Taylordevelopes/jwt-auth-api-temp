@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const createSlug = require("../utils/createSlug");
+const requireAuth = require("../middleware/requireAuth");
 
 const router = express.Router();
 
@@ -59,8 +60,8 @@ router.get("/:slug", async (req, res) => {
   }
 });
 
-// POST /post-blog
-router.post("/post-blog", async (req, res) => {
+// POST /post-blog (Protected - requires authentication)
+router.post("/post-blog", requireAuth, async (req, res) => {
   try {
     const { blogger_id, title, body, published = false } = req.body;
 
@@ -99,6 +100,76 @@ router.post("/post-blog", async (req, res) => {
         error: "Invalid blogger_id. User does not exist.",
       });
     }
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+router.put("/:slug", requireAuth, async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { title, body, published } = req.body;
+
+    const result = await db.query(
+      `
+        UPDATE blogs
+        SET title = $1, body = $2, published = $3
+        WHERE slug = $4
+        RETURNING *
+      `,
+      [title, body, published, slug],
+    );
+
+    const blog = result.rows[0];
+
+    if (!blog) {
+      return res.status(404).json({
+        error: "Blog not found",
+      });
+    }
+
+    res.json({
+      message: "Blog updated successfully",
+      blog,
+    });
+  } catch (error) {
+    console.error("Update blog error:", error);
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+router.delete("/:slug", requireAuth, async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const result = await db.query(
+      `
+        DELETE FROM blogs
+        WHERE slug = $1
+        RETURNING *
+      `,
+      [slug],
+    );
+
+    const blog = result.rows[0];
+
+    if (!blog) {
+      return res.status(404).json({
+        error: "Blog not found",
+      });
+    }
+
+    res.json({
+      message: "Blog deleted successfully",
+      blog,
+    });
+  } catch (error) {
+    console.error("Delete blog error:", error);
 
     res.status(500).json({
       error: "Something went wrong",
