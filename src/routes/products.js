@@ -115,4 +115,151 @@ router.post("/", async (req, res) => {
   }
 });
 
+// PUT /products/:slug
+router.put("/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { title, description, image_url, site_url, download_url, featured } =
+      req.body;
+
+    // Check if product exists
+    const checkResult = await db.query(
+      `
+        SELECT id FROM products WHERE slug = $1
+      `,
+      [slug],
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Product not found",
+      });
+    }
+
+    // Build dynamic update query
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (title !== undefined) {
+      updates.push(`title = $${paramCount}`);
+      values.push(title);
+      paramCount++;
+
+      // Update slug if title changes
+      updates.push(`slug = $${paramCount}`);
+      values.push(createSlug(title));
+      paramCount++;
+    }
+
+    if (description !== undefined) {
+      updates.push(`description = $${paramCount}`);
+      values.push(description);
+      paramCount++;
+    }
+
+    if (image_url !== undefined) {
+      updates.push(`image_url = $${paramCount}`);
+      values.push(image_url);
+      paramCount++;
+    }
+
+    if (site_url !== undefined) {
+      updates.push(`site_url = $${paramCount}`);
+      values.push(site_url);
+      paramCount++;
+    }
+
+    if (download_url !== undefined) {
+      updates.push(`download_url = $${paramCount}`);
+      values.push(download_url);
+      paramCount++;
+    }
+
+    if (featured !== undefined) {
+      updates.push(`featured = $${paramCount}`);
+      values.push(featured);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        error: "No fields to update",
+      });
+    }
+
+    // Add updated_at timestamp
+    updates.push(`updated_at = NOW()`);
+
+    // Add slug to values for WHERE clause
+    values.push(slug);
+
+    const result = await db.query(
+      `
+        UPDATE products
+        SET ${updates.join(", ")}
+        WHERE slug = $${paramCount}
+        RETURNING *
+      `,
+      values,
+    );
+
+    res.json({
+      message: "Product updated successfully",
+      product: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Update product error:", error);
+
+    if (error.code === "23505") {
+      return res.status(400).json({
+        error: "A product with this slug already exists",
+      });
+    }
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+// DELETE /products/:slug
+router.delete("/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    // Check if product exists
+    const checkResult = await db.query(
+      `
+        SELECT id FROM products WHERE slug = $1
+      `,
+      [slug],
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Product not found",
+      });
+    }
+
+    // Delete the product
+    await db.query(
+      `
+        DELETE FROM products WHERE slug = $1
+      `,
+      [slug],
+    );
+
+    res.json({
+      message: "Product deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete product error:", error);
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
 module.exports = router;
