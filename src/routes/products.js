@@ -69,6 +69,7 @@ router.post("/", async (req, res) => {
       site_url,
       download_url,
       featured = false,
+      is_phone_app = false,
     } = req.body;
 
     if (!title || !description || !image_url) {
@@ -88,12 +89,22 @@ router.post("/", async (req, res) => {
           image_url,
           site_url,
           download_url,
-          featured
+          featured,
+          is_phone_app
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `,
-      [title, slug, description, image_url, site_url, download_url, featured],
+      [
+        title,
+        slug,
+        description,
+        image_url,
+        site_url,
+        download_url,
+        featured,
+        is_phone_app,
+      ],
     );
 
     res.status(201).json({
@@ -119,8 +130,15 @@ router.post("/", async (req, res) => {
 router.put("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
-    const { title, description, image_url, site_url, download_url, featured } =
-      req.body;
+    const {
+      title,
+      description,
+      image_url,
+      site_url,
+      download_url,
+      featured,
+      is_phone_app,
+    } = req.body;
 
     // Check if product exists
     const checkResult = await db.query(
@@ -179,6 +197,12 @@ router.put("/:slug", async (req, res) => {
     if (featured !== undefined) {
       updates.push(`featured = $${paramCount}`);
       values.push(featured);
+      paramCount++;
+    }
+
+    if (is_phone_app !== undefined) {
+      updates.push(`is_phone_app = $${paramCount}`);
+      values.push(is_phone_app);
       paramCount++;
     }
 
