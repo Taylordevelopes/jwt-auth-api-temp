@@ -44,9 +44,9 @@ router.post("/subscribe", async (req, res) => {
 
 router.post("/runclubsubscribe", async (req, res) => {
   try {
-    const { email, fullName, age, RunnerStatus } = req.body;
+    const { email, fullName, age, runnerStatus } = req.body;
 
-    if (!email || !fullName || !age || !RunnerStatus) {
+    if (!email || !fullName || !age || !runnerStatus) {
       return res.status(400).json({
         error: "All fields are required",
       });
@@ -54,11 +54,16 @@ router.post("/runclubsubscribe", async (req, res) => {
 
     const result = await db.query(
       `
-        INSERT INTO run_club_signups (fullName , email, age, RunnerStatus)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, email, age, RunnerStatus
+      INSERT INTO run_club_signups (
+        full_name,
+        email,
+        age_range,
+        runner_status
+      )
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
       `,
-      [fullName, email, age, RunnerStatus],
+      [fullName, email, age, runnerStatus],
     );
 
     res.status(201).json({
@@ -79,5 +84,4 @@ router.post("/runclubsubscribe", async (req, res) => {
     });
   }
 });
-
 module.exports = router;
