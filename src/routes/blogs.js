@@ -176,5 +176,41 @@ router.delete("/:slug", requireAuth, async (req, res) => {
     });
   }
 });
+router.post("/like", async (req, res) => {
+  try {
+    const { blog_id, email } = req.body;
+
+    if (!blog_id || !email) {
+      return res.status(400).json({
+        error: "blog_id and email are required.",
+      });
+    }
+
+    const result = await db.query(
+      `
+      INSERT INTO blog_likes (blog_id, email)
+      VALUES ($1, LOWER($2))
+      RETURNING *
+      `,
+      [blog_id, email],
+    );
+
+    res.status(201).json({
+      message: "Blog liked.",
+      like: result.rows[0],
+    });
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(409).json({
+        error: "You have already liked this blog post.",
+      });
+    }
+
+    console.error(err);
+    res.status(500).json({
+      error: "Failed to like blog.",
+    });
+  }
+});
 
 module.exports = router;
