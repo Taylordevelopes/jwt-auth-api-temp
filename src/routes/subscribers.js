@@ -57,7 +57,7 @@ router.post("/runclubsubscribe", async (req, res) => {
       INSERT INTO run_club_signups (
         full_name,
         email,
-        age_range,
+        age,
         runner_status
       )
       VALUES ($1, $2, $3, $4)
