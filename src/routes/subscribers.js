@@ -42,6 +42,26 @@ router.post("/subscribe", async (req, res) => {
   }
 });
 
+router.get("/heroimages", async (req, res) => {
+  try {
+    const result = await db.query(
+      `
+        SELECT * FROM hero_images
+        WHERE is_active = true
+      `,
+    );
+
+    res.status(200).json({
+      images: result.rows,
+    });
+  } catch (error) {
+    console.error("Hero Images error:", error);
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
 router.post("/runclubsubscribe", async (req, res) => {
   try {
     const { email, fullName, age, runnerStatus } = req.body;
