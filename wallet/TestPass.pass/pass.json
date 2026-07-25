@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "passTypeIdentifier": "pass.com.yourcompany.testpass",
-  "teamIdentifier": "YOUR_APPLE_TEAM_ID",
+  "passTypeIdentifier": "pass.xyz.spearitual.testpass",
+  "teamIdentifier": "37H94Q2G8K",
   "organizationName": "Test Company",
   "description": "Test Location Pass",
   "serialNumber": "test-pass-template",
