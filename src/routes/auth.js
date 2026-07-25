@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../db");
 
 const router = express.Router();
+const { generateWalletPass } = require("../services/walletPassService");
 
 // POST /signup
 router.post("/signup", async (req, res) => {
@@ -101,6 +102,34 @@ router.post("/login", async (req, res) => {
 
     res.status(500).json({
       error: "Something went wrong",
+    });
+  }
+});
+
+router.get("/wallet-pass", async (req, res) => {
+  try {
+    const { buffer, serialNumber } = await generateWalletPass();
+
+    console.log("Test Wallet pass generated:", {
+      serialNumber,
+      generatedAt: new Date().toISOString(),
+    });
+
+    res.set({
+      "Content-Type": "application/vnd.apple.pkpass",
+      "Content-Disposition": 'attachment; filename="test-pass.pkpass"',
+      "Content-Length": buffer.length,
+      "Cache-Control": "no-store",
+    });
+
+    return res.send(buffer);
+  } catch (error) {
+    console.error("Test Wallet pass error:", error);
+
+    return res.status(500).json({
+      error: "Unable to generate test Wallet pass",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });
