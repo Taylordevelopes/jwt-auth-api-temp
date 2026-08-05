@@ -9,6 +9,7 @@ const authRoutes = require("./routes/auth");
 const productsRoutes = require("./routes/products");
 const blogsRoutes = require("./routes/blogs");
 const subscribersRoutes = require("./routes/subscribers");
+const gameRoutes = require("./routes/game");
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/", indexRoutes);
 app.use("/", authRoutes);
 app.use("/products", productsRoutes);
 app.use("/blogs", blogsRoutes);
+app.use("/game", gameRoutes);
 app.use("/", subscribersRoutes);
 
 const PORT = process.env.PORT || 4000;

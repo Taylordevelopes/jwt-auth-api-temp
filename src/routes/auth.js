@@ -7,16 +7,16 @@ const router = express.Router();
 const { generateWalletPass } = require("../services/walletPassService");
 const generatePlayerCode = require("../utils/generatePlayerCode");
 
-async function createUniquePlayerCode() {
+async function createUniquePlayerCode(client) {
   const maxAttempts = 20;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const code = generatePlayerCode();
+    const code = Math.floor(1000 + Math.random() * 9000);
 
-    const result = await db.query(
+    const result = await client.query(
       `
         SELECT id
-        FROM bingo_players
+        FROM public.bingo_players
         WHERE code = $1
         LIMIT 1
       `,
@@ -66,47 +66,108 @@ router.post("/signup", async (req, res) => {
 });
 
 router.post("/playerSignUp", async (req, res) => {
+  const client = await db.connect();
+
   try {
     const { name, email } = req.body;
 
-    if (!name || !email) {
+    if (!name?.trim() || !email?.trim()) {
       return res.status(400).json({
         error: "Name and email are required",
       });
     }
 
-    const existingPlayer = await db.query(
+    const normalizedName = name.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    await client.query("BEGIN");
+
+    const existingPlayer = await client.query(
       `
-      SELECT id
-      FROM bingo_players
-      WHERE email = $1
+        SELECT id
+        FROM public.bingo_players
+        WHERE email = $1
       `,
-      [email.toLowerCase()],
+      [normalizedEmail],
     );
 
     if (existingPlayer.rowCount > 0) {
+      await client.query("ROLLBACK");
+
       return res.status(409).json({
         error: "That email is already registered.",
       });
     }
 
-    const code = await createUniquePlayerCode();
+    const code = await createUniquePlayerCode(client);
 
-    const result = await db.query(
+    const playerResult = await client.query(
       `
-      INSERT INTO bingo_players (name, email, code)
-      VALUES ($1, $2, $3)
-      RETURNING id, name, email, code, created_at
+        INSERT INTO public.bingo_players (
+          name,
+          email,
+          code
+        )
+        VALUES ($1, $2, $3)
+        RETURNING id, name, email, code, created_at
       `,
-      [name, email.toLowerCase(), code],
+      [normalizedName, normalizedEmail, code],
     );
 
-    const player = result.rows[0];
+    const player = playerResult.rows[0];
+
+    const tasksResult = await client.query(`
+      SELECT id
+      FROM public.tasks
+      ORDER BY RANDOM()
+      LIMIT 6
+    `);
+
+    if (tasksResult.rowCount < 6) {
+      throw new Error("At least 6 tasks are required to create a board");
+    }
+
+    for (let index = 0; index < tasksResult.rows.length; index += 1) {
+      const task = tasksResult.rows[index];
+
+      await client.query(
+        `
+          INSERT INTO public.player_board_tasks (
+            player_id,
+            task_id,
+            board_position
+          )
+          VALUES ($1, $2, $3)
+        `,
+        [player.id, task.id, index + 1],
+      );
+    }
+
+    const boardResult = await client.query(
+      `
+        SELECT
+          pbt.id AS player_board_task_id,
+          pbt.board_position,
+          pbt.is_completed,
+          pbt.completed_at,
+          t.id AS task_id,
+          t.title,
+          t.points,
+          t.difficulty
+        FROM public.player_board_tasks pbt
+        JOIN public.tasks t
+          ON t.id = pbt.task_id
+        WHERE pbt.player_id = $1
+        ORDER BY pbt.board_position ASC
+      `,
+      [player.id],
+    );
 
     const token = jwt.sign(
       {
         sub: player.id,
         email: player.email,
+        role: "bingo_player",
       },
       process.env.JWT_SECRET,
       {
@@ -114,17 +175,30 @@ router.post("/playerSignUp", async (req, res) => {
       },
     );
 
-    res.status(201).json({
+    await client.query("COMMIT");
+
+    return res.status(201).json({
       message: "Player signed up successfully",
       token,
       player,
+      board: boardResult.rows,
     });
   } catch (error) {
+    await client.query("ROLLBACK");
+
     console.error("Player signup error:", error);
 
-    res.status(500).json({
+    if (error.code === "23505") {
+      return res.status(409).json({
+        error: "That email or player code is already in use",
+      });
+    }
+
+    return res.status(500).json({
       error: "Something went wrong",
     });
+  } finally {
+    client.release();
   }
 });
 
