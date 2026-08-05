@@ -11,7 +11,7 @@ router.get("/playerBoard", requireAuth, async (req, res) => {
     const result = await db.query(
       `
       SELECT
-        pbt.id,
+        pbt.id AS player_board_task_id,
         pbt.board_position,
         pbt.is_completed,
         pbt.completed_at,
