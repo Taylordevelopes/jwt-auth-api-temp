@@ -10,6 +10,7 @@ const productsRoutes = require("./routes/products");
 const blogsRoutes = require("./routes/blogs");
 const subscribersRoutes = require("./routes/subscribers");
 const gameRoutes = require("./routes/game");
+const googleWalletRoutes = require("./routes/googleWallet");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/products", productsRoutes);
 app.use("/blogs", blogsRoutes);
 app.use("/game", gameRoutes);
 app.use("/", subscribersRoutes);
+app.use("/", googleWalletRoutes);
 
 const PORT = process.env.PORT || 4000;
 

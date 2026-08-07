@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
+const healixDb = require("../healixdb");
 
 const router = express.Router();
 const { generateWalletPass } = require("../services/walletPassService");
@@ -202,6 +203,108 @@ router.post("/playerSignUp", async (req, res) => {
   }
 });
 
+router.post("/members/signup", async (req, res) => {
+  const client = await healixdb.connect();
+
+  try {
+    const { name, city, phone, email, answer, emailOptIn } = req.body;
+
+    if (!name?.trim() || !email?.trim() || !city.trim() || !phone.trim()) {
+      return res.status(400).json({
+        error: "Name, email, phone, city are required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    await client.query("BEGIN");
+
+    let memberResult = await client.query(
+      `
+        SELECT
+          id,
+          name,
+          city,
+          phone,
+          email,
+          answer,
+          email_opt_in,
+          created_at,
+          updated_at
+        FROM members
+        WHERE email = $1
+      `,
+      [normalizedEmail],
+    );
+
+    let member;
+
+    if (memberResult.rowCount > 0) {
+      member = memberResult.rows[0];
+    } else {
+      memberResult = await client.query(
+        `
+          INSERT INTO members (
+            name,
+            city,
+            phone,
+            email,
+            answer,
+            email_opt_in
+          )
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING
+            id,
+            name,
+            city,
+            phone,
+            email,
+            answer,
+            email_opt_in,
+            created_at,
+            updated_at
+        `,
+        [
+          name.trim(),
+          city?.trim() || null,
+          phone?.trim() || null,
+          normalizedEmail,
+          answer?.trim() || null,
+          Boolean(emailOptIn),
+        ],
+      );
+
+      member = memberResult.rows[0];
+    }
+
+    const googleWallet = createGoogleWalletUrl(member);
+
+    await client.query("COMMIT");
+
+    return res.status(200).json({
+      message:
+        memberResult.rowCount > 0
+          ? "Member found"
+          : "Member created successfully",
+      member,
+      wallet: {
+        googleUrl: googleWallet.saveUrl,
+        appleUrl: `https://api.spearitual.xyz/wallet-pass?memberId=${member.id}`,
+      },
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("Member signup error:", error);
+
+    return res.status(500).json({
+      error: "Unable to process member",
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // POST /login
 router.post("/login", async (req, res) => {
   try {
@@ -329,28 +432,55 @@ router.post("/playerLogin", async (req, res) => {
     });
   }
 });
-router.get("/wallet-pass", async (req, res) => {
+router.get("/wallet-pass/:memberId", async (req, res) => {
   try {
-    const { buffer, serialNumber } = await generateWalletPass();
+    const { memberId } = req.params;
 
-    console.log("Test Wallet pass generated:", {
+    const result = await healixDb.query(
+      `
+        SELECT
+          id,
+          name,
+          city,
+          phone,
+          email,
+          answer,
+          email_opt_in
+        FROM members
+        WHERE id = $1
+      `,
+      [memberId],
+    );
+
+    const member = result.rows[0];
+
+    if (!member) {
+      return res.status(404).json({
+        error: "Member not found",
+      });
+    }
+
+    const { buffer, serialNumber } = await generateWalletPass(member);
+
+    console.log("Apple Wallet pass generated:", {
+      memberId: member.id,
       serialNumber,
       generatedAt: new Date().toISOString(),
     });
 
     res.set({
       "Content-Type": "application/vnd.apple.pkpass",
-      "Content-Disposition": 'attachment; filename="test-pass.pkpass"',
+      "Content-Disposition": 'attachment; filename="healix-membership.pkpass"',
       "Content-Length": buffer.length,
       "Cache-Control": "no-store",
     });
 
     return res.send(buffer);
   } catch (error) {
-    console.error("Test Wallet pass error:", error);
+    console.error("Apple Wallet pass error:", error);
 
     return res.status(500).json({
-      error: "Unable to generate test Wallet pass",
+      error: "Unable to generate Apple Wallet pass",
       details:
         process.env.NODE_ENV === "development" ? error.message : undefined,
     });

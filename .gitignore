@@ -19,3 +19,5 @@ yarn-error.log*
 
 # System files
 .DS_Store
+
+healix-google-wallet/credentials/

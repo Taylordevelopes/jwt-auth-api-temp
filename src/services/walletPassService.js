@@ -29,8 +29,12 @@ function getLocationCoordinates() {
   };
 }
 
-async function generateWalletPass() {
-  const passModelPath = path.join(process.cwd(), "wallet", "TestPass.pass");
+async function generateWalletPass(member) {
+  const passModelPath = path.join(
+    process.cwd(),
+    "wallet",
+    "HealixMembership.pass",
+  );
 
   const certificatesPath = path.join(process.cwd(), "certificates");
 
@@ -42,7 +46,7 @@ async function generateWalletPass() {
 
   const { latitude, longitude } = getLocationCoordinates();
 
-  const serialNumber = `test-pass-${crypto.randomUUID()}`;
+  const serialNumber = String(member.id);
 
   const pass = await PKPass.from(
     {
@@ -58,11 +62,32 @@ async function generateWalletPass() {
     },
   );
 
+  pass.primaryFields.push({
+    key: "holder",
+    label: "PASS HOLDER",
+    value: member.name,
+  });
+
+  if (member.city) {
+    pass.secondaryFields.push({
+      key: "city",
+      label: "CITY",
+      value: member.city,
+    });
+  }
+
+  pass.setBarcodes({
+    format: "PKBarcodeFormatQR",
+    message: String(member.id),
+    messageEncoding: "iso-8859-1",
+    altText: "Healix Member",
+  });
+
   pass.setLocations({
     latitude,
     longitude,
     relevantText:
-      process.env.PASS_LOCATION_MESSAGE || "Your test location is nearby",
+      process.env.PASS_LOCATION_MESSAGE || "Your Healix location is nearby",
   });
 
   return {
