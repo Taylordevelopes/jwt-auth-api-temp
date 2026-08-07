@@ -49,7 +49,7 @@ function createGoogleWalletUrl(member) {
     subheader: {
       defaultValue: {
         language: "en-US",
-        value: "ENROLLED",
+        value: "HEALIX STATUS: Active",
       },
     },
 
@@ -66,7 +66,7 @@ function createGoogleWalletUrl(member) {
     },
 
     barcode: {
-      type: "CODE_128",
+      type: "QR_CODE",
       value: String(member.id),
       alternateText: member.id,
     },

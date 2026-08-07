@@ -26,7 +26,7 @@ router.get("/google-wallet-pass", async (req, res) => {
     const classId = `${issuerId}.${classSuffix}`;
 
     // Must be unique for every individual pass.
-    const objectSuffix = `healix_style_test_${Date.now()}`;
+    const objectSuffix = `healix_style_test_test${Date.now()}`;
     const objectId = `${issuerId}.${objectSuffix}`;
 
     const genericObject = {
