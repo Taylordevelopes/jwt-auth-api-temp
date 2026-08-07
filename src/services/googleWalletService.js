@@ -30,6 +30,8 @@ function createGoogleWalletUrl(member) {
     classId,
     state: "ACTIVE",
 
+    hexBackgroundColor: "#00ff00",
+
     cardTitle: {
       defaultValue: {
         language: "en-US",
@@ -47,21 +49,43 @@ function createGoogleWalletUrl(member) {
     subheader: {
       defaultValue: {
         language: "en-US",
-        value: "Healix Membership",
+        value: "ENROLLED",
+      },
+    },
+
+    logo: {
+      sourceUri: {
+        uri: "https://spearitual.xyz/healix-symbol.png",
+      },
+      contentDescription: {
+        defaultValue: {
+          language: "en-US",
+          value: "Healix",
+        },
       },
     },
 
     barcode: {
-      type: "QR_CODE",
+      type: "CODE_128",
       value: String(member.id),
-      alternateText: "Healix Member",
+      alternateText: member.id,
     },
 
     textModulesData: [
       {
-        id: "membership",
-        header: "Membership",
-        body: "Present this pass at participating Healix locations.",
+        id: "status",
+        header: "HEALIX STATUS",
+        body: "Active",
+      },
+      {
+        id: "points",
+        header: "ENCOUNTER POINTS",
+        body: "0",
+      },
+      {
+        id: "designation",
+        header: "DESIGNATION",
+        body: "ENROLLED",
       },
     ],
   };
