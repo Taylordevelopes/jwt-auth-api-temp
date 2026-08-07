@@ -491,6 +491,65 @@ router.get("/wallet-pass/:memberId", async (req, res) => {
   }
 });
 
+router.get("/members/pass", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email?.trim()) {
+      return res.status(400).json({
+        error: "Email is required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const result = await healixDb.query(
+      `
+        SELECT
+          id,
+          name,
+          city,
+          phone,
+          email,
+          answer,
+          email_opt_in,
+          created_at,
+          updated_at
+        FROM members
+        WHERE email = $1
+      `,
+      [normalizedEmail],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        error: "Member not found",
+      });
+    }
+
+    const member = result.rows[0];
+
+    const googleWallet = createGoogleWalletUrl(member);
+
+    return res.status(200).json({
+      member,
+
+      wallet: {
+        googleUrl: googleWallet.saveUrl,
+        appleUrl: `https://api.spearitual.xyz/wallet-pass/${member.id}`,
+      },
+
+      barcodeUrl: `https://api.spearitual.xyz/members/${member.id}/barcode`,
+    });
+  } catch (error) {
+    console.error("Get member pass error:", error);
+
+    return res.status(500).json({
+      error: "Unable to retrieve member pass",
+    });
+  }
+});
+
 router.get("/members/:memberId/barcode", async (req, res) => {
   try {
     const { memberId } = req.params;
