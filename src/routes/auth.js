@@ -522,8 +522,8 @@ router.get("/members/pass", async (req, res) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({
-        error: "Member not found",
+      return res.status(200).json({
+        ready: false,
       });
     }
 
