@@ -7,9 +7,9 @@
   "description": "Healix Membership Pass",
   "logoText": "Healix",
 
-  "foregroundColor": "rgb(255,255,255)",
-  "backgroundColor": "rgb(20,20,20)",
-  "labelColor": "rgb(180,180,180)",
+  "foregroundColor": "rgb(0, 0, 0)",
+  "backgroundColor": "rgb(0, 255, 0)",
+  "labelColor": "rgb(30, 30, 30)",
 
   "generic": {
     "primaryFields": [],

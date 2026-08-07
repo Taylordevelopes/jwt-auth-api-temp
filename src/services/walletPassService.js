@@ -63,18 +63,28 @@ async function generateWalletPass(member) {
   );
 
   pass.primaryFields.push({
-    key: "holder",
-    label: "PASS HOLDER",
+    key: "status",
+    label: "HEALIX STATUS",
+    value: "Active",
+  });
+
+  pass.secondaryFields.push({
+    key: "points",
+    label: "ENCOUNTER POINTS",
+    value: "0",
+  });
+
+  pass.auxiliaryFields.push({
+    key: "name",
+    label: "NAME",
     value: member.name,
   });
 
-  if (member.city) {
-    pass.secondaryFields.push({
-      key: "city",
-      label: "CITY",
-      value: member.city,
-    });
-  }
+  pass.auxiliaryFields.push({
+    key: "membership",
+    label: "DESIGNATION",
+    value: "ENROLLED",
+  });
 
   pass.setBarcodes({
     format: "PKBarcodeFormatQR",
