@@ -204,7 +204,7 @@ router.post("/playerSignUp", async (req, res) => {
 });
 
 router.post("/members/signup", async (req, res) => {
-  const client = await healixdb.connect();
+  const client = await healixDb.connect();
 
   try {
     const { name, city, phone, email, answer, emailOptIn } = req.body;
