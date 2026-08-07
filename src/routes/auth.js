@@ -290,7 +290,7 @@ router.post("/members/signup", async (req, res) => {
       member,
       wallet: {
         googleUrl: googleWallet.saveUrl,
-        appleUrl: `https://api.spearitual.xyz/wallet-pass?memberId=${member.id}`,
+        appleUrl: `https://api.spearitual.xyz/wallet-pass/${member.id}`,
       },
     });
   } catch (error) {
