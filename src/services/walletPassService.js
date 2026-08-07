@@ -87,10 +87,10 @@ async function generateWalletPass(member) {
   });
 
   pass.setBarcodes({
-    format: "PKBarcodeFormatQR",
+    format: "PKBarcodeFormatCode128",
     message: String(member.id),
     messageEncoding: "iso-8859-1",
-    altText: "Healix Member",
+    altText: String(member.id),
   });
 
   pass.setLocations({
