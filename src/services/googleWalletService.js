@@ -65,12 +65,6 @@ function createGoogleWalletUrl(member) {
       },
     },
 
-    barcode: {
-      type: "QR_CODE",
-      value: String(member.id),
-      alternateText: member.id,
-    },
-
     textModulesData: [
       {
         id: "status",
