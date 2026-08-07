@@ -8,6 +8,7 @@ const router = express.Router();
 const { generateWalletPass } = require("../services/walletPassService");
 const { createGoogleWalletUrl } = require("../services/googleWalletService");
 const generatePlayerCode = require("../utils/generatePlayerCode");
+const bwipjs = require("bwip-js");
 
 async function createUniquePlayerCode(client) {
   const maxAttempts = 20;
