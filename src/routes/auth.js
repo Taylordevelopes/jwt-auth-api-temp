@@ -491,8 +491,6 @@ router.get("/wallet-pass/:memberId", async (req, res) => {
   }
 });
 
-const bwipjs = require("bwip-js");
-
 router.get("/members/:memberId/barcode", async (req, res) => {
   try {
     const { memberId } = req.params;
