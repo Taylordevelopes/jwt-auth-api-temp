@@ -2,54 +2,19 @@
   "formatVersion": 1,
   "passTypeIdentifier": "pass.xyz.healix.membership",
   "teamIdentifier": "37H94Q2G8K",
+
   "organizationName": "Healix",
   "description": "Healix Membership Pass",
-  "serialNumber": "test-pass-template",
   "logoText": "Healix",
-  "foregroundColor": "rgb(255, 255, 255)",
-  "backgroundColor": "rgb(20, 20, 20)",
-  "labelColor": "rgb(180, 180, 180)",
+
+  "foregroundColor": "rgb(255,255,255)",
+  "backgroundColor": "rgb(20,20,20)",
+  "labelColor": "rgb(180,180,180)",
+
   "generic": {
-    "primaryFields": [
-      {
-        "key": "holder",
-        "label": "PASS HOLDER",
-        "value": "Test User"
-      }
-    ],
-    "secondaryFields": [
-      {
-        "key": "access",
-        "label": "PASS TYPE",
-        "value": "Location Test"
-      }
-    ],
-    "auxiliaryFields": [
-      {
-        "key": "status",
-        "label": "STATUS",
-        "value": "Active"
-      }
-    ],
-    "backFields": [
-      {
-        "key": "website",
-        "label": "Website",
-        "value": "https://yourdomain.com"
-      },
-      {
-        "key": "location-info",
-        "label": "Location Relevance",
-        "value": "This test pass may appear when you approach the configured location."
-      }
-    ]
-  },
-  "barcodes": [
-    {
-      "format": "PKBarcodeFormatQR",
-      "message": "https://yourdomain.com",
-      "messageEncoding": "iso-8859-1",
-      "altText": "Test Pass"
-    }
-  ]
+    "primaryFields": [],
+    "secondaryFields": [],
+    "auxiliaryFields": [],
+    "backFields": []
+  }
 }
