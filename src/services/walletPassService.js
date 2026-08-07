@@ -90,7 +90,7 @@ async function generateWalletPass(member) {
     format: "PKBarcodeFormatCode128",
     message: String(member.id),
     messageEncoding: "iso-8859-1",
-    altText: String(member.id),
+    altText: member.id.slice(0, 32).toUpperCase(),
   });
 
   pass.setLocations({

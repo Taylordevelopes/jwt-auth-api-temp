@@ -292,6 +292,8 @@ router.post("/members/signup", async (req, res) => {
         googleUrl: googleWallet.saveUrl,
         appleUrl: `https://api.spearitual.xyz/wallet-pass/${member.id}`,
       },
+
+      barcodeUrl: `https://api.spearitual.xyz/members/${member.id}/barcode`,
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -484,6 +486,53 @@ router.get("/wallet-pass/:memberId", async (req, res) => {
       error: "Unable to generate Apple Wallet pass",
       details:
         process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+const bwipjs = require("bwip-js");
+
+router.get("/members/:memberId/barcode", async (req, res) => {
+  try {
+    const { memberId } = req.params;
+
+    const result = await healixDb.query(
+      `
+        SELECT id
+        FROM members
+        WHERE id = $1
+      `,
+      [memberId],
+    );
+
+    const member = result.rows[0];
+
+    if (!member) {
+      return res.status(404).json({
+        error: "Member not found",
+      });
+    }
+
+    const barcode = await bwipjs.toBuffer({
+      bcid: "code128",
+      text: String(member.id),
+      scale: 3,
+      height: 12,
+      includetext: true,
+      textxalign: "center",
+    });
+
+    res.set({
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=3600",
+    });
+
+    return res.send(barcode);
+  } catch (error) {
+    console.error("Barcode error:", error);
+
+    return res.status(500).json({
+      error: "Unable to generate barcode",
     });
   }
 });
