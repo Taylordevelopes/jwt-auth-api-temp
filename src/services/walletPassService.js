@@ -13,22 +13,47 @@ function getRequiredEnv(name) {
   return value;
 }
 
-function getLocationCoordinates() {
-  const latitude = Number(getRequiredEnv("PASS_LOCATION_LATITUDE"));
-  const longitude = Number(getRequiredEnv("PASS_LOCATION_LONGITUDE"));
+function getPassLocations() {
+  return [
+    {
+      latitude: 33.752368,
+      longitude: -84.395053,
+      relevantText:
+        "Sidequest BRUNCH Roulette ☕: I order for you. You order for me. Let’s Bottle Rocket.",
+    },
+    {
+      latitude: 33.748428,
+      longitude: -84.403898,
+      relevantText:
+        "Sidequest HEALIX WALK 🌳: Invite a person you vibe with for a walk around the RICE Center. Get to know one another along the way.",
+    },
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new Error(
-      "PASS_LOCATION_LATITUDE and PASS_LOCATION_LONGITUDE must be valid numbers",
-    );
-  }
-
-  return {
-    latitude,
-    longitude,
-  };
+    {
+      latitude: 33.7520468,
+      longitude: -84.3928773,
+      relevantText:
+        "Sidequest JUNGLE KIDS🎨: Write a warm message to a child struggling with housing stability in Atlanta’s school system.  Text (404) 693 0823.",
+    },
+    {
+      latitude: 33.7509941,
+      longitude: -84.3934862,
+      relevantText:
+        "COFFEE CULTURE👋🏽 Sidequest: Find or meet a friend from a different culture. Talk about ceremonious food and drinks. Play nice. ",
+    },
+    {
+      latitude: 33.8485001,
+      longitude: -84.3735805,
+      relevantText:
+        "Sidequest WHITE FERRARI🌃 : Find a shiny new friend or two. Seal your connection with evening plans.  We’ll send you two addresses. Pick one. On the drive, nostalgia music only.  ",
+    },
+    {
+      latitude: 33.9667989,
+      longitude: -84.218902,
+      relevantText:
+        "Sidequest BINGO BABY👶🏽: Easy start. Play one row of Sticker Run Bingo. Welcome to GEORGIA. ",
+    },
+  ];
 }
-
 async function generateWalletPass(member) {
   const passModelPath = path.join(
     process.cwd(),
@@ -44,7 +69,7 @@ async function generateWalletPass(member) {
     fs.readFile(path.join(certificatesPath, "signerKey.pem")),
   ]);
 
-  const { latitude, longitude } = getLocationCoordinates();
+  const locations = getPassLocations();
 
   const serialNumber = String(member.id);
 
@@ -93,12 +118,7 @@ async function generateWalletPass(member) {
     altText: member.id.slice(0, 32).toUpperCase(),
   });
 
-  pass.setLocations({
-    latitude,
-    longitude,
-    relevantText:
-      process.env.PASS_LOCATION_MESSAGE || "Your Healix location is nearby",
-  });
+  pass.setLocations(...locations);
 
   return {
     buffer: pass.getAsBuffer(),
