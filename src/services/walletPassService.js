@@ -52,6 +52,24 @@ function getPassLocations() {
       relevantText:
         "Sidequest BINGO BABY👶🏽: Easy start. Play one row of Sticker Run Bingo. Welcome to GEORGIA. ",
     },
+    {
+      latitude: 33.7364586,
+      longitude: -84.4103058,
+      relevantText:
+        "Sidequest FIND NI-KA🎨:Ni-ka is a healing-artist with 20 tickets to a private play and dinner. Find her. Get yours.",
+    },
+    {
+      latitude: 33.7364586,
+      longitude: -84.4103058,
+      relevantText:
+        "Sidequest FIND NI-KA🎨:Ni-ka is a healing-artist with 20 tickets to a private play and dinner. Find her. Get yours.",
+    },
+    {
+      latitude: 33.760979,
+      longitude: -84.389771,
+      relevantText:
+        "BINGO BABY 👶🏽 One row. Easy start. Link coming via text. Welcome to GEORGIA.",
+    },
   ];
 }
 async function generateWalletPass(member) {
