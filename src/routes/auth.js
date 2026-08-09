@@ -72,11 +72,17 @@ router.post("/playerSignUp", async (req, res) => {
   const client = await db.connect();
 
   try {
-    const { name, email } = req.body;
+    const { name, email, brand = "spearitual" } = req.body;
 
     if (!name?.trim() || !email?.trim()) {
       return res.status(400).json({
         error: "Name and email are required",
+      });
+    }
+
+    if (!["spearitual", "healix"].includes(brand)) {
+      return res.status(400).json({
+        error: "Invalid board brand",
       });
     }
 
@@ -102,8 +108,10 @@ router.post("/playerSignUp", async (req, res) => {
       });
     }
 
+    // Generate player's unique recovery/login code
     const code = await createUniquePlayerCode(client);
 
+    // Create player
     const playerResult = await client.query(
       `
         INSERT INTO public.bingo_players (
@@ -112,24 +120,37 @@ router.post("/playerSignUp", async (req, res) => {
           code
         )
         VALUES ($1, $2, $3)
-        RETURNING id, name, email, code, created_at
+        RETURNING
+          id,
+          name,
+          email,
+          code,
+          created_at
       `,
       [normalizedName, normalizedEmail, code],
     );
 
     const player = playerResult.rows[0];
 
-    const tasksResult = await client.query(`
-      SELECT id
-      FROM public.tasks
-      ORDER BY RANDOM()
-      LIMIT 6
-    `);
+    // Select 9 random tasks belonging to this brand
+    const tasksResult = await client.query(
+      `
+        SELECT id
+        FROM public.tasks
+        WHERE brand = $1
+        ORDER BY RANDOM()
+        LIMIT 9
+      `,
+      [brand],
+    );
 
-    if (tasksResult.rowCount < 6) {
-      throw new Error("At least 6 tasks are required to create a board");
+    if (tasksResult.rowCount < 9) {
+      throw new Error(
+        `At least 9 ${brand} tasks are required to create a board`,
+      );
     }
 
+    // Add selected tasks to player's board
     for (let index = 0; index < tasksResult.rows.length; index += 1) {
       const task = tasksResult.rows[index];
 
@@ -146,6 +167,7 @@ router.post("/playerSignUp", async (req, res) => {
       );
     }
 
+    // Get completed board
     const boardResult = await client.query(
       `
         SELECT
@@ -156,7 +178,8 @@ router.post("/playerSignUp", async (req, res) => {
           t.id AS task_id,
           t.title,
           t.points,
-          t.difficulty
+          t.difficulty,
+          t.brand
         FROM public.player_board_tasks pbt
         JOIN public.tasks t
           ON t.id = pbt.task_id
@@ -166,6 +189,7 @@ router.post("/playerSignUp", async (req, res) => {
       [player.id],
     );
 
+    // Create login token
     const token = jwt.sign(
       {
         sub: player.id,
