@@ -105,6 +105,7 @@ router.post("/playerBoard/new", requireAuth, async (req, res) => {
 
   try {
     const playerId = req.user.sub;
+    const { brand = "spearitual" } = req.body;
 
     await client.query("BEGIN");
 
@@ -117,19 +118,25 @@ router.post("/playerBoard/new", requireAuth, async (req, res) => {
       [playerId],
     );
 
-    // Select six new random tasks
-    const tasksResult = await client.query(`
-      SELECT id
-      FROM public.tasks
-      ORDER BY RANDOM()
-      LIMIT 6
-    `);
+    // Select 9 random tasks for this brand
+    const tasksResult = await client.query(
+      `
+        SELECT id
+        FROM public.tasks
+        WHERE brand = $1
+        ORDER BY RANDOM()
+        LIMIT 9
+      `,
+      [brand],
+    );
 
-    if (tasksResult.rowCount < 6) {
-      throw new Error("At least 6 tasks are required to create a board");
+    if (tasksResult.rowCount < 9) {
+      throw new Error(
+        `At least 9 ${brand} tasks are required to create a board`,
+      );
     }
 
-    // Assign the six tasks to the player
+    // Assign tasks to the player
     for (let index = 0; index < tasksResult.rows.length; index += 1) {
       const task = tasksResult.rows[index];
 
@@ -157,7 +164,8 @@ router.post("/playerBoard/new", requireAuth, async (req, res) => {
           t.id AS task_id,
           t.title,
           t.points,
-          t.difficulty
+          t.difficulty,
+          t.brand
         FROM public.player_board_tasks pbt
         JOIN public.tasks t
           ON t.id = pbt.task_id
