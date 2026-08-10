@@ -70,6 +70,12 @@ function getPassLocations() {
       relevantText:
         "BINGO BABY 👶🏽 One row. Easy start. Link coming via text. Welcome to GEORGIA.",
     },
+    {
+      latitude: 33.777161,
+      longitude: -84.407867,
+      relevantText:
+        "WHITE FERRARI (Extended) 🌃You made it! Slow the night down. Share your passions from when you were  16-18yo. Catch a nostalgic vibe together.",
+    },
   ];
 }
 async function generateWalletPass(member) {
