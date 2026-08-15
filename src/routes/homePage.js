@@ -12,7 +12,6 @@ const upload = multer({
 
 router.post(
   "/homeImageSlide",
-  requireAuth,
   upload.single("image_data"),
   async (req, res) => {
     try {
