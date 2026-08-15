@@ -11,6 +11,7 @@ const blogsRoutes = require("./routes/blogs");
 const subscribersRoutes = require("./routes/subscribers");
 const gameRoutes = require("./routes/game");
 const googleWalletRoutes = require("./routes/googleWallet");
+const homePageRoutes = require("./routes/homePage");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/blogs", blogsRoutes);
 app.use("/game", gameRoutes);
 app.use("/", subscribersRoutes);
 app.use("/", googleWalletRoutes);
+app.use("/homePage", homePageRoutes);
 
 const PORT = process.env.PORT || 4000;
 
