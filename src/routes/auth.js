@@ -333,6 +333,92 @@ router.post("/members/signup", async (req, res) => {
   }
 });
 
+router.post("/members/checkin", async (req, res) => {
+  try {
+    const { barcodeId } = req.body;
+
+    // Example: this would come from the scanner/device identity
+    // Ideally from an API key/header, not hardcoded long-term
+    const scannerId = req.headers["x-scanner-id"];
+
+    if (!barcodeId) {
+      return res.status(400).json({
+        error: "barcodeId is required",
+      });
+    }
+
+    if (!scannerId) {
+      return res.status(400).json({
+        error: "scanner ID is required",
+      });
+    }
+
+    // 1. Find the member from the barcode value
+    const memberResult = await db.query(
+      `
+      SELECT id
+      FROM members
+      WHERE id = $1
+      `,
+      [barcodeId],
+    );
+
+    const member = memberResult.rows[0];
+
+    if (!member) {
+      return res.status(404).json({
+        error: "Member not found",
+      });
+    }
+
+    // 2. Find the scanner/tag and its associated location
+    const tagResult = await db.query(
+      `
+      SELECT
+        id,
+        location_id
+      FROM nfc_tags
+      WHERE id = $1
+        AND is_active = true
+      `,
+      [scannerId],
+    );
+
+    const tag = tagResult.rows[0];
+
+    if (!tag) {
+      return res.status(404).json({
+        error: "Scanner/tag not found",
+      });
+    }
+
+    // 3. Write the check-in
+    const checkinResult = await db.query(
+      `
+      INSERT INTO checkins (
+        member_id,
+        nfc_tag_id,
+        location_id
+      )
+      VALUES ($1, $2, $3)
+      RETURNING *
+      `,
+      [member.id, tag.id, tag.location_id],
+    );
+
+    return res.status(201).json({
+      success: true,
+      checkin: checkinResult.rows[0],
+    });
+  } catch (error) {
+    console.error("Check-in error:", error);
+
+    return res.status(500).json({
+      error: "Unable to create check-in",
+    });
+  }
+});
+
 // POST /login
 router.post("/login", async (req, res) => {
   try {
@@ -536,6 +622,7 @@ router.get("/members/pass", async (req, res) => {
           phone,
           email,
           answer,
+          game,
           email_opt_in,
           created_at,
           updated_at
