@@ -233,7 +233,15 @@ router.post("/members/signup", async (req, res) => {
   const client = await healixDb.connect();
 
   try {
-    const { name, city, phone, email, answer, emailOptIn } = req.body;
+    const {
+      name,
+      city,
+      phone,
+      email,
+      answer,
+      game = "other",
+      emailOptIn,
+    } = req.body;
 
     if (!name?.trim() || !email?.trim() || !city.trim() || !phone.trim()) {
       return res.status(400).json({
@@ -247,13 +255,14 @@ router.post("/members/signup", async (req, res) => {
 
     let memberResult = await client.query(
       `
-        SELECT
+       SELECT
           id,
           name,
           city,
           phone,
           email,
           answer,
+          game,
           email_opt_in,
           created_at,
           updated_at
@@ -270,32 +279,35 @@ router.post("/members/signup", async (req, res) => {
     } else {
       memberResult = await client.query(
         `
-          INSERT INTO members (
-            name,
-            city,
-            phone,
-            email,
-            answer,
-            email_opt_in
-          )
-          VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING
-            id,
-            name,
-            city,
-            phone,
-            email,
-            answer,
-            email_opt_in,
-            created_at,
-            updated_at
-        `,
+    INSERT INTO members (
+      name,
+      city,
+      phone,
+      email,
+      answer,
+      game,
+      email_opt_in
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING
+      id,
+      name,
+      city,
+      phone,
+      email,
+      answer,
+      game,
+      email_opt_in,
+      created_at,
+      updated_at
+  `,
         [
           name.trim(),
           city?.trim() || null,
           phone?.trim() || null,
           normalizedEmail,
           answer?.trim() || null,
+          game || "other",
           Boolean(emailOptIn),
         ],
       );
@@ -552,17 +564,18 @@ router.get("/wallet-pass/:memberId", async (req, res) => {
 
     const result = await healixDb.query(
       `
-        SELECT
-          id,
-          name,
-          city,
-          phone,
-          email,
-          answer,
-          email_opt_in
-        FROM members
-        WHERE id = $1
-      `,
+    SELECT
+      id,
+      name,
+      city,
+      phone,
+      email,
+      answer,
+      game,
+      email_opt_in
+    FROM members
+    WHERE id = $1
+  `,
       [memberId],
     );
 
