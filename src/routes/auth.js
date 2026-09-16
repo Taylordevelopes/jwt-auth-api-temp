@@ -702,6 +702,8 @@ router.get("/members/:memberId/barcode", async (req, res) => {
       height: 12,
       includetext: true,
       textxalign: "center",
+      barcolor: "00ff00", // barcode lines
+      textcolor: "00ff00", // numbers/text
     });
 
     res.set({
