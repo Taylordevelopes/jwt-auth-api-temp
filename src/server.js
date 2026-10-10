@@ -12,6 +12,8 @@ const subscribersRoutes = require("./routes/subscribers");
 const gameRoutes = require("./routes/game");
 const googleWalletRoutes = require("./routes/googleWallet");
 const homePageRoutes = require("./routes/homePage");
+const acwEventsRoutes = require("./routes/acwevents");
+const stripeCheckoutRoutes = require("./routes/stripe-checkout");
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use("/game", gameRoutes);
 app.use("/", subscribersRoutes);
 app.use("/", googleWalletRoutes);
 app.use("/homePage", homePageRoutes);
+app.use("/events", acwEventsRoutes);
+app.use("/checkout", stripeCheckoutRoutes);
 
 const PORT = process.env.PORT || 4000;
 
