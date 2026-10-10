@@ -4,6 +4,7 @@ const Stripe = require("stripe");
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+const router = express.Router();
 app.use(express.static("public"));
 app.use(express.json());
 
