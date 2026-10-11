@@ -43,22 +43,6 @@ router.get("/products", async (req, res) => {
   }
 });
 
-router.get("/prices", async (req, res) => {
-  try {
-    const prices = await stripe.prices.list({
-      active: true,
-      limit: 100,
-    });
-
-    res.json({ prices: prices.data });
-  } catch (error) {
-    console.error("Stripe error:", error);
-    res.status(500).json({
-      error: "Failed to retrieve prices",
-    });
-  }
-});
-
 const calculateOrderAmount = (items) => {
   // Calculate the order total on the server to prevent
   // people from directly manipulating the amount on the client
