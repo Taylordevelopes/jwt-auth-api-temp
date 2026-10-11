@@ -3,7 +3,6 @@ const app = express();
 const Stripe = require("stripe");
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const price = await stripe.prices.retrieve("{{PRICE_ID}}");
 
 const router = express.Router();
 app.use(express.static("public"));
@@ -39,6 +38,22 @@ router.get("/products", async (req, res) => {
     console.error("Stripe error:", error);
     res.status(500).json({
       error: "Failed to retrieve products",
+    });
+  }
+});
+
+router.get("/prices", async (req, res) => {
+  try {
+    const prices = await stripe.prices.list({
+      active: true,
+      limit: 100,
+    });
+
+    res.json({ prices: prices.data });
+  } catch (error) {
+    console.error("Stripe error:", error);
+    res.status(500).json({
+      error: "Failed to retrieve prices",
     });
   }
 });
