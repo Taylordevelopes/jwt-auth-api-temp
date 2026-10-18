@@ -68,6 +68,41 @@ router.post("/signup", async (req, res) => {
   }
 });
 
+router.post("/organization-signup", async (req, res) => {
+  try {
+    const { name, username, email, password, phoneNumber, city, state } =
+      req.body;
+
+    if (!email || !password || !name || !username || !city || !state) {
+      return res.status(400).json({
+        error: "All fields are required",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const result = await db.query(
+      `
+        INSERT INTO organizations (name, username, email, password_hash, phone_number, city, state)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, email, created_at
+      `,
+      [name, username, email, passwordHash, phoneNumber, city, state],
+    );
+
+    res.status(201).json({
+      message: "User created successfully",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Signup error:", error);
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
 router.post("/playerSignUp", async (req, res) => {
   const client = await db.connect();
 
