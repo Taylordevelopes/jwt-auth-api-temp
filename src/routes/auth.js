@@ -756,4 +756,40 @@ router.get("/members/:memberId/barcode", async (req, res) => {
   }
 });
 
+router.get("/cities", async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    if (typeof search !== "string" || !search.trim()) {
+      return res.json([]);
+    }
+
+    const result = await db.query(
+      `
+      SELECT
+        id,
+        city,
+        state_code,
+        display_name,
+        latitude,
+        longitude
+      FROM cities
+      WHERE city ILIKE $1
+         OR display_name ILIKE $1
+      ORDER BY city
+      LIMIT 10
+      `,
+      [`%${search.trim()}%`],
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Get cities error:", error);
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
 module.exports = router;
