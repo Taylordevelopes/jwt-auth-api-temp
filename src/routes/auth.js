@@ -438,7 +438,7 @@ router.post("/members/checkin", async (req, res) => {
     // 3. Write the check-in
     const checkinResult = await db.query(
       `
-      INSERT INTO checkins (
+      INSERT INTO member_checkins (
         member_id,
         nfc_tag_id,
         location_id
