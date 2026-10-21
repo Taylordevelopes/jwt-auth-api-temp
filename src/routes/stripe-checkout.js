@@ -165,7 +165,7 @@ router.post("/healix/donations/checkout", async (req, res) => {
 
     const session = await healixStripe.checkout.sessions.create({
       mode: "payment",
-      ui_mode: "embedded",
+      ui_mode: "embedded_page",
 
       line_items: [
         {
