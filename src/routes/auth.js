@@ -382,11 +382,7 @@ router.post("/members/signup", async (req, res) => {
 
 router.post("/members/checkin", async (req, res) => {
   try {
-    const { barcodeId } = req.body;
-
-    // Example: this would come from the scanner/device identity
-    // Ideally from an API key/header, not hardcoded long-term
-    const scannerId = req.headers["x-scanner-id"];
+    const { barcodeId, scannerId } = req.body;
 
     if (!barcodeId) {
       return res.status(400).json({
