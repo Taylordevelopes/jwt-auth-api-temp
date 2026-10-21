@@ -384,6 +384,7 @@ router.post("/members/checkin", async (req, res) => {
   try {
     const { barcodeId, scannerId } = req.body;
 
+    // Validate required fields
     if (!barcodeId) {
       return res.status(400).json({
         error: "barcodeId is required",
@@ -396,8 +397,23 @@ router.post("/members/checkin", async (req, res) => {
       });
     }
 
-    // 1. Find the member from the barcode value
-    const memberResult = await db.query(
+    // Validate UUID format
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (
+      typeof barcodeId !== "string" ||
+      typeof scannerId !== "string" ||
+      !uuidRegex.test(barcodeId) ||
+      !uuidRegex.test(scannerId)
+    ) {
+      return res.status(400).json({
+        error: "Invalid barcode or scanner ID",
+      });
+    }
+
+    // 1. Find member using barcode
+    const memberResult = await healixDb.query(
       `
       SELECT id
       FROM members
@@ -414,15 +430,18 @@ router.post("/members/checkin", async (req, res) => {
       });
     }
 
-    // 2. Find the scanner/tag and its associated location
-    const tagResult = await db.query(
+    // 2. Find scanner and associated active location
+    const tagResult = await healixDb.query(
       `
       SELECT
-        id,
-        location_id
-      FROM nfc_tags
-      WHERE id = $1
-        AND is_active = true
+        nt.id,
+        nt.location_id
+      FROM nfc_tags nt
+      JOIN locations l
+        ON l.id = nt.location_id
+      WHERE nt.id = $1
+        AND nt.is_active = true
+        AND l.is_active = true
       `,
       [scannerId],
     );
@@ -431,12 +450,12 @@ router.post("/members/checkin", async (req, res) => {
 
     if (!tag) {
       return res.status(404).json({
-        error: "Scanner/tag not found",
+        error: "Scanner/tag not found or inactive",
       });
     }
 
-    // 3. Write the check-in
-    const checkinResult = await db.query(
+    // 3. Save check-in to HEALIX database
+    const checkinResult = await healixDb.query(
       `
       INSERT INTO member_checkins (
         member_id,
@@ -451,6 +470,7 @@ router.post("/members/checkin", async (req, res) => {
 
     return res.status(201).json({
       success: true,
+      message: "Member checked in successfully",
       checkin: checkinResult.rows[0],
     });
   } catch (error) {
