@@ -7,6 +7,10 @@ const healixDb = require("../healixdb");
 const router = express.Router();
 const { generateWalletPass } = require("../services/walletPassService");
 const { createGoogleWalletUrl } = require("../services/googleWalletService");
+const {
+  getOrCreatePassAuthenticationToken,
+} = require("../services/walletPassAuthService");
+
 const generatePlayerCode = require("../utils/generatePlayerCode");
 const bwipjs = require("bwip-js");
 
