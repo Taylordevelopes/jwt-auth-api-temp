@@ -1,6 +1,5 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const crypto = require("node:crypto");
 const { PKPass } = require("passkit-generator");
 
 function getRequiredEnv(name) {
@@ -22,7 +21,16 @@ function getPassLocations() {
     },
   ];
 }
-async function generateWalletPass(member) {
+
+async function generateWalletPass(member, authenticationToken) {
+  if (!member?.id) {
+    throw new Error("Member ID is required");
+  }
+
+  if (!authenticationToken || authenticationToken.length < 16) {
+    throw new Error("Valid pass authentication token is required");
+  }
+
   const passModelPath = path.join(
     process.cwd(),
     "wallet",
@@ -37,8 +45,6 @@ async function generateWalletPass(member) {
     fs.readFile(path.join(certificatesPath, "signerKey.pem")),
   ]);
 
-  const locations = getPassLocations();
-
   const serialNumber = String(member.id);
 
   const pass = await PKPass.from(
@@ -51,7 +57,9 @@ async function generateWalletPass(member) {
       },
     },
     {
-      serialNumber,
+      serialNumber: String(member.id),
+      webServiceURL: process.env.APPLE_WALLET_WEB_SERVICE_URL,
+      authenticationToken,
     },
   );
 
@@ -81,12 +89,12 @@ async function generateWalletPass(member) {
 
   pass.setBarcodes({
     format: "PKBarcodeFormatCode128",
-    message: String(member.id),
+    message: serialNumber,
     messageEncoding: "iso-8859-1",
-    altText: member.id.slice(0, 32).toUpperCase(),
+    altText: serialNumber.slice(0, 32).toUpperCase(),
   });
 
-  pass.setLocations(...locations);
+  pass.setLocations(...getPassLocations());
 
   return {
     buffer: pass.getAsBuffer(),

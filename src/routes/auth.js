@@ -382,55 +382,66 @@ router.post("/members/signup", async (req, res) => {
 
 router.post("/members/checkin", async (req, res) => {
   try {
-    const { barcodeId, scannerId } = req.body;
+    const { barcodeId, scannerId } = req.body || {};
 
-    // Validate required fields
-    if (!barcodeId) {
+    if (typeof barcodeId !== "string" || typeof scannerId !== "string") {
       return res.status(400).json({
-        error: "barcodeId is required",
+        error: "barcodeId and scannerId are required",
       });
     }
 
-    if (!scannerId) {
-      return res.status(400).json({
-        error: "scanner ID is required",
-      });
-    }
+    const memberId = barcodeId.trim().toLowerCase();
+    const tagId = scannerId.trim();
 
-    // Validate UUID format
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    if (
-      typeof barcodeId !== "string" ||
-      typeof scannerId !== "string" ||
-      !uuidRegex.test(barcodeId) ||
-      !uuidRegex.test(scannerId)
-    ) {
+    // First 32 characters of the UUID shown on Wallet passes.
+    const shortIdRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{8}$/i;
+
+    const isFullId = uuidRegex.test(memberId);
+    const isShortId = shortIdRegex.test(memberId);
+
+    if ((!isFullId && !isShortId) || !uuidRegex.test(tagId)) {
       return res.status(400).json({
-        error: "Invalid barcode or scanner ID",
+        error: "Invalid member ID or scanner ID",
       });
     }
 
-    // 1. Find member using barcode
+    // 1. Find member by full UUID or shortened Wallet ID.
     const memberResult = await healixDb.query(
-      `
-      SELECT id
-      FROM members
-      WHERE id = $1
-      `,
-      [barcodeId],
+      isFullId
+        ? `
+          SELECT id
+          FROM members
+          WHERE id = $1::uuid
+          LIMIT 2
+        `
+        : `
+          SELECT id
+          FROM members
+          WHERE LEFT(id::text, 32) = $1
+          LIMIT 2
+        `,
+      [memberId],
     );
 
-    const member = memberResult.rows[0];
-
-    if (!member) {
+    if (memberResult.rows.length === 0) {
       return res.status(404).json({
         error: "Member not found",
       });
     }
 
-    // 2. Find scanner and associated active location
+    if (memberResult.rows.length > 1) {
+      return res.status(409).json({
+        error: "Multiple members match this ID",
+      });
+    }
+
+    const member = memberResult.rows[0];
+
+    // 2. Find active scanner and its location.
     const tagResult = await healixDb.query(
       `
       SELECT
@@ -439,11 +450,11 @@ router.post("/members/checkin", async (req, res) => {
       FROM nfc_tags nt
       JOIN locations l
         ON l.id = nt.location_id
-      WHERE nt.id = $1
+      WHERE nt.id = $1::uuid
         AND nt.is_active = true
         AND l.is_active = true
       `,
-      [scannerId],
+      [tagId],
     );
 
     const tag = tagResult.rows[0];
@@ -454,7 +465,7 @@ router.post("/members/checkin", async (req, res) => {
       });
     }
 
-    // 3. Save check-in to HEALIX database
+    // 3. Record the check-in using the full member UUID.
     const checkinResult = await healixDb.query(
       `
       INSERT INTO member_checkins (
@@ -638,7 +649,14 @@ router.get("/wallet-pass/:memberId", async (req, res) => {
       });
     }
 
-    const { buffer, serialNumber } = await generateWalletPass(member);
+    const authenticationToken = await getOrCreatePassAuthenticationToken(
+      member.id,
+    );
+
+    const { buffer, serialNumber } = await generateWalletPass(
+      member,
+      authenticationToken,
+    );
 
     console.log("Apple Wallet pass generated:", {
       memberId: member.id,
