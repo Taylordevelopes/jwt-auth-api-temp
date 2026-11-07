@@ -13,6 +13,7 @@ const gameRoutes = require("./routes/game");
 const googleWalletRoutes = require("./routes/googleWallet");
 const homePageRoutes = require("./routes/homePage");
 const stripeCheckoutRoutes = require("./routes/stripe-checkout");
+const appleWalletRoutes = require("./routes/appleWalletRoutes");
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/", subscribersRoutes);
 app.use("/", googleWalletRoutes);
 app.use("/homePage", homePageRoutes);
 app.use("/checkout", stripeCheckoutRoutes);
+app.use("/", appleWalletRoutes);
 
 const PORT = process.env.PORT || 4000;
 
