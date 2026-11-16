@@ -514,6 +514,21 @@ router.post("/members/checkin", async (req, res) => {
 
     const updatedMember = pointsResult.rows[0];
 
+    // 7. Mark the member's Apple Wallet pass as updated
+    const walletPassResult = await client.query(
+      `
+      UPDATE wallet_passes
+      SET
+        update_version = update_version + 1,
+        updated_at = NOW()
+      WHERE member_id = $1::uuid
+      RETURNING id, serial_number, update_version
+      `,
+      [member.id],
+    );
+
+    const updatedWalletPass = walletPassResult.rows[0] || null;
+
     // 7. Commit changes
     await client.query("COMMIT");
 
@@ -524,6 +539,12 @@ router.post("/members/checkin", async (req, res) => {
       pointsEarned: points,
       totalPoints: updatedMember.points,
       encounterType,
+      walletPass: updatedWalletPass
+        ? {
+            serialNumber: updatedWalletPass.serial_number,
+            updateVersion: updatedWalletPass.update_version,
+          }
+        : null,
     });
   } catch (error) {
     if (client) {
