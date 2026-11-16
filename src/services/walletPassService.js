@@ -88,10 +88,10 @@ async function generateWalletPass(member, authenticationToken) {
   });
 
   pass.setBarcodes({
-    format: "PKBarcodeFormatCode128",
-    message: serialNumber,
+    message: String(member.id),
+    format: "PKBarcodeFormatQR",
     messageEncoding: "iso-8859-1",
-    altText: serialNumber.slice(0, 32).toUpperCase(),
+    altText: String(member.id),
   });
 
   pass.setLocations(...getPassLocations());
