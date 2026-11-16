@@ -6,11 +6,11 @@ const healixDb = require("../healixdb");
 const PASS_TYPE_ID = process.env.APPLE_WALLET_PASS_TYPE_IDENTIFIER;
 
 const certificate = fs.readFileSync(
-  path.join(__dirname, "../certificates/signerCert.pem"),
+  path.join(__dirname, "../../certificates/signerCert.pem"),
 );
 
 const privateKey = fs.readFileSync(
-  path.join(__dirname, "../certificates/signerKey.pem"),
+  path.join(__dirname, "../../certificates/signerKey.pem"),
 );
 
 async function sendWalletPush(memberId) {
