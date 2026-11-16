@@ -72,7 +72,7 @@ async function generateWalletPass(member, authenticationToken) {
   pass.secondaryFields.push({
     key: "points",
     label: "ENCOUNTER POINTS",
-    value: "0",
+    value: String(member.points ?? 0),
   });
 
   pass.auxiliaryFields.push({

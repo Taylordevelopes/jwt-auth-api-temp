@@ -385,68 +385,67 @@ router.post("/members/signup", async (req, res) => {
 });
 
 router.post("/members/checkin", async (req, res) => {
+  const { barcodeId, scannerId, points, encounterType } = req.body || {};
+
+  // 1. Validate request
+  if (typeof barcodeId !== "string" || typeof scannerId !== "string") {
+    return res.status(400).json({
+      error: "barcodeId and scannerId are required",
+    });
+  }
+
+  const memberId = barcodeId.trim();
+  const tagId = scannerId.trim();
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (!uuidRegex.test(memberId) || !uuidRegex.test(tagId)) {
+    return res.status(400).json({
+      error: "Invalid member ID or scanner ID",
+    });
+  }
+
+  if (typeof points !== "number" || !Number.isFinite(points) || points < 0) {
+    return res.status(400).json({
+      error: "points must be a non-negative number",
+    });
+  }
+
+  if (!Number.isSafeInteger(encounterType) || encounterType < 1) {
+    return res.status(400).json({
+      error: "Invalid encounter type",
+    });
+  }
+
+  let client;
+
   try {
-    const { barcodeId, scannerId } = req.body || {};
+    client = await healixDb.connect();
 
-    if (typeof barcodeId !== "string" || typeof scannerId !== "string") {
-      return res.status(400).json({
-        error: "barcodeId and scannerId are required",
-      });
-    }
+    await client.query("BEGIN");
 
-    const memberId = barcodeId.trim().toLowerCase();
-    const tagId = scannerId.trim();
-
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-    // First 32 characters of the UUID shown on Wallet passes.
-    const shortIdRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{8}$/i;
-
-    const isFullId = uuidRegex.test(memberId);
-    const isShortId = shortIdRegex.test(memberId);
-
-    if ((!isFullId && !isShortId) || !uuidRegex.test(tagId)) {
-      return res.status(400).json({
-        error: "Invalid member ID or scanner ID",
-      });
-    }
-
-    // 1. Find member by full UUID or shortened Wallet ID.
-    const memberResult = await healixDb.query(
-      isFullId
-        ? `
-          SELECT id
-          FROM members
-          WHERE id = $1::uuid
-          LIMIT 2
-        `
-        : `
-          SELECT id
-          FROM members
-          WHERE LEFT(id::text, 32) = $1
-          LIMIT 2
-        `,
+    // 2. Find member
+    const memberResult = await client.query(
+      `
+      SELECT id
+      FROM members
+      WHERE id = $1::uuid
+      `,
       [memberId],
     );
 
-    if (memberResult.rows.length === 0) {
+    const member = memberResult.rows[0];
+
+    if (!member) {
+      await client.query("ROLLBACK");
       return res.status(404).json({
         error: "Member not found",
       });
     }
 
-    if (memberResult.rows.length > 1) {
-      return res.status(409).json({
-        error: "Multiple members match this ID",
-      });
-    }
-
-    const member = memberResult.rows[0];
-
-    // 2. Find active scanner and its location.
-    const tagResult = await healixDb.query(
+    // 3. Find active scanner and location
+    const tagResult = await client.query(
       `
       SELECT
         nt.id,
@@ -464,36 +463,84 @@ router.post("/members/checkin", async (req, res) => {
     const tag = tagResult.rows[0];
 
     if (!tag) {
+      await client.query("ROLLBACK");
       return res.status(404).json({
         error: "Scanner/tag not found or inactive",
       });
     }
 
-    // 3. Record the check-in using the full member UUID.
-    const checkinResult = await healixDb.query(
+    // 4. Validate encounter type
+    const encounterResult = await client.query(
+      `
+      SELECT id
+      FROM encounter_types
+      WHERE id = $1
+      `,
+      [encounterType],
+    );
+
+    if (!encounterResult.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({
+        error: "Encounter type not found",
+      });
+    }
+
+    // 5. Record check-in
+    const checkinResult = await client.query(
       `
       INSERT INTO member_checkins (
         member_id,
         nfc_tag_id,
-        location_id
+        location_id,
+        encounter_type
       )
-      VALUES ($1, $2, $3)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
       `,
-      [member.id, tag.id, tag.location_id],
+      [member.id, tag.id, tag.location_id, encounterType],
     );
+
+    // 6. Award Encounter Points
+    const pointsResult = await client.query(
+      `
+      UPDATE members
+      SET points = COALESCE(points, 0) + $1
+      WHERE id = $2::uuid
+      RETURNING id, points
+      `,
+      [points, member.id],
+    );
+
+    const updatedMember = pointsResult.rows[0];
+
+    // 7. Commit changes
+    await client.query("COMMIT");
 
     return res.status(201).json({
       success: true,
       message: "Member checked in successfully",
       checkin: checkinResult.rows[0],
+      pointsEarned: points,
+      totalPoints: updatedMember.points,
+      encounterType,
     });
   } catch (error) {
+    if (client) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error("Rollback error:", rollbackError);
+      }
+    }
+
     console.error("Check-in error:", error);
 
     return res.status(500).json({
       error: "Unable to create check-in",
     });
+  } finally {
+    if (client) client.release();
   }
 });
 
@@ -638,7 +685,8 @@ router.get("/wallet-pass/:memberId", async (req, res) => {
       email,
       answer,
       game,
-      email_opt_in
+      email_opt_in,
+      points
     FROM members
     WHERE id = $1
   `,

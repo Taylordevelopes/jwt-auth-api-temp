@@ -1,8 +1,8 @@
 const express = require("express");
 const crypto = require("node:crypto");
 const healixDb = require("../healixdb");
-
 const router = express.Router();
+const { generateWalletPass } = require("../services/walletPassService");
 
 router.post(
   "/v1/devices/:deviceLibraryIdentifier/registrations/:passTypeIdentifier/:serialNumber",
@@ -136,5 +136,76 @@ router.post(
     }
   },
 );
+
+router.get("/v1/passes/:passTypeIdentifier/:serialNumber", async (req, res) => {
+  try {
+    const { passTypeIdentifier, serialNumber } = req.params;
+
+    const authorization = req.get("Authorization") || "";
+    const match = /^ApplePass ([^\s]+)$/.exec(authorization);
+
+    if (!match) {
+      return res.sendStatus(401);
+    }
+
+    const incomingHash = crypto.createHash("sha256").update(match[1]).digest();
+
+    // Verify the pass identity and authentication token.
+    const passResult = await healixDb.query(
+      `
+        SELECT id, member_id, authentication_token_hash
+        FROM wallet_passes
+        WHERE pass_type_identifier = $1
+          AND serial_number = $2
+        `,
+      [passTypeIdentifier, serialNumber],
+    );
+
+    const pass = passResult.rows[0];
+
+    if (!pass) {
+      return res.sendStatus(404);
+    }
+
+    const storedHash = Buffer.from(pass.authentication_token_hash, "hex");
+
+    if (
+      storedHash.length !== incomingHash.length ||
+      !crypto.timingSafeEqual(storedHash, incomingHash)
+    ) {
+      return res.sendStatus(401);
+    }
+
+    // Retrieve the current member data.
+    const memberResult = await healixDb.query(
+      `
+        SELECT id, name, city, phone, email,points
+        FROM members
+        WHERE id = $1
+        `,
+      [pass.member_id],
+    );
+
+    const member = memberResult.rows[0];
+
+    if (!member) {
+      return res.sendStatus(404);
+    }
+
+    // Reuse the authenticated token from Apple's request.
+    const { buffer } = await generateWalletPass(member, match[1]);
+
+    res.set({
+      "Content-Type": "application/vnd.apple.pkpass",
+      "Content-Disposition": 'attachment; filename="healix-membership.pkpass"',
+      "Cache-Control": "no-store",
+    });
+
+    return res.send(buffer);
+  } catch (error) {
+    console.error("Apple Wallet pass update error:", error);
+    return res.sendStatus(500);
+  }
+});
 
 module.exports = router;
