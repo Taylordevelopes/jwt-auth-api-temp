@@ -208,4 +208,74 @@ router.get("/v1/passes/:passTypeIdentifier/:serialNumber", async (req, res) => {
   }
 });
 
+router.get(
+  "/v1/devices/:deviceLibraryIdentifier/registrations/:passTypeIdentifier",
+  async (req, res) => {
+    try {
+      const { deviceLibraryIdentifier, passTypeIdentifier } = req.params;
+      const { passesUpdatedSince } = req.query;
+
+      // The first request may not include an update tag.
+      let lastVersion = 0;
+
+      if (passesUpdatedSince !== undefined) {
+        if (
+          typeof passesUpdatedSince !== "string" ||
+          !/^\d+$/.test(passesUpdatedSince)
+        ) {
+          return res.sendStatus(400);
+        }
+
+        lastVersion = Number(passesUpdatedSince);
+
+        if (!Number.isSafeInteger(lastVersion)) {
+          return res.sendStatus(400);
+        }
+      }
+
+      // Find the registered pass for this device.
+      const result = await healixDb.query(
+        `
+        SELECT
+          wp.serial_number,
+          wp.update_version
+        FROM wallet_registrations wr
+        JOIN wallet_devices wd
+          ON wd.id = wr.device_id
+        JOIN wallet_passes wp
+          ON wp.id = wr.pass_id
+        WHERE wd.device_library_identifier = $1
+          AND wp.pass_type_identifier = $2
+        `,
+        [deviceLibraryIdentifier, passTypeIdentifier],
+      );
+
+      if (result.rows.length === 0) {
+        return res.sendStatus(204);
+      }
+
+      // Healix MVP: one registered pass per device.
+      if (result.rows.length > 1) {
+        console.error("Multiple Healix passes registered to device");
+        return res.sendStatus(409);
+      }
+
+      const pass = result.rows[0];
+      const currentVersion = Number(pass.update_version);
+
+      if (currentVersion <= lastVersion) {
+        return res.sendStatus(204);
+      }
+
+      return res.status(200).json({
+        serialNumbers: [pass.serial_number],
+        lastUpdated: String(currentVersion),
+      });
+    } catch (error) {
+      console.error("Apple Wallet changed-passes error:", error);
+      return res.sendStatus(500);
+    }
+  },
+);
+
 module.exports = router;
