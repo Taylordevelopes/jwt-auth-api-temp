@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 const healixDb = require("../healixdb");
+const { sendWalletPush } = require("../services/applePushService");
 
 const router = express.Router();
 const { generateWalletPass } = require("../services/walletPassService");
@@ -531,6 +532,14 @@ router.post("/members/checkin", async (req, res) => {
 
     // 7. Commit changes
     await client.query("COMMIT");
+
+    await client.query("COMMIT");
+
+    try {
+      await sendWalletPush(member.id);
+    } catch (error) {
+      console.error("Apple Wallet push failed:", error);
+    }
 
     return res.status(201).json({
       success: true,
