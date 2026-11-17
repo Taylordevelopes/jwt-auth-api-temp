@@ -91,7 +91,6 @@ async function generateWalletPass(member, authenticationToken) {
     message: String(member.id),
     format: "PKBarcodeFormatQR",
     messageEncoding: "iso-8859-1",
-    altText: String(member.id),
   });
 
   pass.setLocations(...getPassLocations());
