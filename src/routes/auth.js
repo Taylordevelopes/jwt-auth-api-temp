@@ -533,8 +533,6 @@ router.post("/members/checkin", async (req, res) => {
     // 7. Commit changes
     await client.query("COMMIT");
 
-    await client.query("COMMIT");
-
     try {
       await sendWalletPush(member.id);
     } catch (error) {
