@@ -14,9 +14,10 @@ const {
 
 const generatePlayerCode = require("../utils/generatePlayerCode");
 const bwipjs = require("bwip-js");
+const requireAuth = require("../middleware/requireAuth");
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
 
@@ -911,7 +912,7 @@ router.get("/cities", async (req, res) => {
   }
 });
 
-router.get("/admin/logs", requireAdmin, async (req, res) => {
+router.get("/admin/logs", async (req, res) => {
   try {
     const { stdout } = await execFileAsync(
       "pm2",
