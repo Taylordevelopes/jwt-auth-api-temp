@@ -435,10 +435,10 @@ router.post("/members/checkin", async (req, res) => {
     // 2. Find member
     const memberResult = await client.query(
       `
-      SELECT id
-      FROM members
-      WHERE id = $1::uuid
-      `,
+  SELECT id, name
+  FROM members
+  WHERE id = $1::uuid
+  `,
       [memberId],
     );
 
@@ -450,6 +450,8 @@ router.post("/members/checkin", async (req, res) => {
         error: "Member not found",
       });
     }
+
+    console.log(`Checking in member: ${member.name} (${member.id})`);
 
     // 3. Find active scanner and location
     const tagResult = await client.query(
@@ -544,6 +546,22 @@ router.post("/members/checkin", async (req, res) => {
     } catch (error) {
       console.error("Apple Wallet push failed:", error);
     }
+
+    console.log(`
+========================================
+HEALIX / CHECK-IN SUCCESSFUL
+
+Member: ${member.name}
+Member ID: ${member.id}
+
+Points earned: ${Number(points).toFixed(2)}
+Total points: ${Number(updatedMember.points).toFixed(2)}
+
+Time: ${new Date().toLocaleString("en-US", {
+      timeZone: "America/New_York",
+    })}
+========================================
+`);
 
     return res.status(201).json({
       success: true,
