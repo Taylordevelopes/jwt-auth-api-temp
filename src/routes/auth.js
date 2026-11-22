@@ -429,10 +429,10 @@ router.post("/members/checkin", async (req, res) => {
     // 2. Find member
     const memberResult = await client.query(
       `
-      SELECT id
-      FROM members
-      WHERE id = $1::uuid
-      `,
+  SELECT id, first_name, last_name
+  FROM members
+  WHERE id = $1::uuid
+  `,
       [memberId],
     );
 
@@ -542,6 +542,9 @@ router.post("/members/checkin", async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Member checked in successfully",
+      memberName: [member.first_name, member.last_name]
+        .filter(Boolean)
+        .join(" "),
       checkin: checkinResult.rows[0],
       pointsEarned: points,
       totalPoints: updatedMember.points,
