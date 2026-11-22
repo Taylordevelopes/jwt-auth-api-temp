@@ -931,7 +931,7 @@ router.get("/cities", async (req, res) => {
   }
 });
 
-router.get("/admin/logs", requireAdmin, async (req, res) => {
+router.get("/admin/logs", async (req, res) => {
   try {
     const { stdout } = await execFileAsync(
       "pm2",
