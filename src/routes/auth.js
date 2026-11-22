@@ -15,6 +15,11 @@ const {
 const generatePlayerCode = require("../utils/generatePlayerCode");
 const bwipjs = require("bwip-js");
 
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
 async function createUniquePlayerCode(client) {
   const maxAttempts = 20;
 
@@ -429,10 +434,10 @@ router.post("/members/checkin", async (req, res) => {
     // 2. Find member
     const memberResult = await client.query(
       `
-  SELECT id, first_name, last_name
-  FROM members
-  WHERE id = $1::uuid
-  `,
+      SELECT id
+      FROM members
+      WHERE id = $1::uuid
+      `,
       [memberId],
     );
 
@@ -542,9 +547,6 @@ router.post("/members/checkin", async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Member checked in successfully",
-      memberName: [member.first_name, member.last_name]
-        .filter(Boolean)
-        .join(" "),
       checkin: checkinResult.rows[0],
       pointsEarned: points,
       totalPoints: updatedMember.points,
@@ -905,6 +907,32 @@ router.get("/cities", async (req, res) => {
 
     res.status(500).json({
       error: "Something went wrong",
+    });
+  }
+});
+
+router.get("/admin/logs", requireAdmin, async (req, res) => {
+  try {
+    const { stdout } = await execFileAsync(
+      "pm2",
+      ["logs", "jwt-auth-api", "--lines", "50", "--nostream", "--raw"],
+      {
+        timeout: 5000,
+        maxBuffer: 1024 * 1024,
+      },
+    );
+
+    res.json({
+      success: true,
+      logs: stdout,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to fetch PM2 logs:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to fetch logs",
     });
   }
 });
