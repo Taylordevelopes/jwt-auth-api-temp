@@ -20,6 +20,7 @@ const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
+const fs = require("node:fs/promises");
 
 async function createUniquePlayerCode(client) {
   const maxAttempts = 20;
@@ -930,26 +931,45 @@ router.get("/cities", async (req, res) => {
   }
 });
 
-router.get("/admin/logs", async (req, res) => {
+router.get("/admin/logs", requireAdmin, async (req, res) => {
   try {
     const { stdout } = await execFileAsync(
       "pm2",
-      ["logs", "jwt-auth-api", "--lines", "50", "--nostream", "--raw"],
+      ["logs", "jwt-auth-api", "--lines", "100", "--nostream", "--raw"],
       {
         timeout: 5000,
         maxBuffer: 1024 * 1024,
       },
     );
 
-    res.json({
+    const filteredLogs = stdout
+      .split("\n")
+      .filter((line) => {
+        const text = line.trim();
+
+        return (
+          text.includes("Checking in member:") ||
+          text.includes("HEALIX / CHECK-IN SUCCESSFUL") ||
+          text.includes("Member:") ||
+          text.includes("Member ID:") ||
+          text.includes("Points earned:") ||
+          text.includes("Total points:") ||
+          text.includes("Time:") ||
+          text.includes("Check-in error:") ||
+          text.includes("Apple Wallet push failed:")
+        );
+      })
+      .join("\n");
+
+    return res.json({
       success: true,
-      logs: stdout,
+      logs: filteredLogs,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Failed to fetch PM2 logs:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: "Unable to fetch logs",
     });
