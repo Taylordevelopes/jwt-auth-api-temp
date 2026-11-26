@@ -14,6 +14,9 @@ const googleWalletRoutes = require("./routes/googleWallet");
 const homePageRoutes = require("./routes/homePage");
 const stripeCheckoutRoutes = require("./routes/stripe-checkout");
 const appleWalletRoutes = require("./routes/appleWalletRoutes");
+const reportRoutes = require("./routes/reports");
+
+app.use("/reports", requireAdmin, reportRoutes);
 
 const app = express();
 
@@ -40,6 +43,7 @@ app.use("/", googleWalletRoutes);
 app.use("/homePage", homePageRoutes);
 app.use("/checkout", stripeCheckoutRoutes);
 app.use("/", appleWalletRoutes);
+app.use("/reports", requireAdmin, reportRoutes);
 
 const PORT = process.env.PORT || 4000;
 
